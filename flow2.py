@@ -4,7 +4,7 @@ from typing import TypedDict, List
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.pydantic_v1 import BaseModel
-from IPython.display import Image, display, Markdown
+from IPython.display import display, Markdown
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from prompts import (
@@ -29,17 +29,13 @@ class AgentState(TypedDict):
 
     new_version: str
     new_price: int
+    rollout_date: str
+    modify: bool
 
-
-# importing API keys
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-
-# MODEL_NAME = "gemini-1.5-flash"
 MODEL_NAME = "gemini-2.0-flash-exp"
-
 model = ChatGoogleGenerativeAI(
     model=MODEL_NAME,
     generation_config={
@@ -73,7 +69,7 @@ def select_project(state: AgentState):
 def select_product(state: AgentState):
     content = "\n\n".join(state["content"] or [])
     user_message = HumanMessage(
-        content=f"{state['flow']}\n\nHere is my plan:\n\n{state['plan']}"
+        content=f"{state['flow']}\n\nHere is the product:\n\n{state['product_name']}"
     )
     messages = [
         SystemMessage(content=select_product_prompt.format(content=content)),
@@ -99,7 +95,7 @@ def create_version(state: AgentState):
     queries = model.with_structured_output(Queries).invoke(
         [
             SystemMessage(content=create_version_prompt),
-            HumanMessage(content=state["critique"]),
+            HumanMessage(content=state["version_number"]),
         ]
     )
     content = state["flow"] or []
@@ -112,7 +108,7 @@ def roll_date(state: AgentState):
     queries = model.with_structured_output(Queries).invoke(
         [
             SystemMessage(content=roll_date_prompt),
-            HumanMessage(content=state["critique"]),
+            HumanMessage(content=state["rollout_date"]),
         ]
     )
     content = state["content"] or []
@@ -122,23 +118,16 @@ def roll_date(state: AgentState):
 
 
 def has_project(state: AgentState) -> str:
-    # Check if project exists
-    if state["project_status"]:
-        print("Have project")
+    if state.get("project_status"):
         return "select_project"
-    else:
-        print("No project")
-        return "select_product"
+    return "select_product"
 
 
 def product_options(state: AgentState) -> str:
-    # Check if project exists
-    if state["modify"]:
-        print("modify_prices")
+    if state.get("modify"):
         return "modify_prices"
-    else:
-        print("create_version")
-        return "create_version"
+    return "create_version"
+
 
 
 builder = StateGraph(AgentState)
@@ -167,12 +156,6 @@ builder.add_conditional_edges(
 builder.add_edge("create_version", "roll_date")
 builder.add_edge("modify_prices", END)
 builder.add_edge("roll_date", END)
-
-
-# memory = SqliteSaver.from_conn_string(":memory:")
-with SqliteSaver.from_conn_string(":memory:") as checkpointer:
-    graph = builder.compile(checkpointer=checkpointer)
-Image(graph.get_graph().draw_png())
 
 
 with SqliteSaver.from_conn_string(":memory:") as checkpointer:
