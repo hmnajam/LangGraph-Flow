@@ -214,6 +214,8 @@ if __name__ == "__main__":
     print(
         f"--- Google API Key Loaded: {'Yes' if GOOGLE_API_KEY else 'No! Check .env file'} ---"
     )
-    print(f"--- Using System Message: \"{SYSTEM_MESSAGE_CONTENT}\" ---")
-    print("--- Using Checkpointer: MemorySaver (History persists only while server runs) ---")
+    print(f'--- Using System Message: "{SYSTEM_MESSAGE_CONTENT}" ---')
+    print(
+        "--- Using Checkpointer: MemorySaver (History persists only while server runs) ---"
+    )
     uvicorn.run(app, host="127.0.0.1", port=8000)

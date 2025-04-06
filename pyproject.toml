@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115.12",
     "langgraph>=0.3.25",
+    "langgraph-checkpoint-sqlite>=2.0.6",
     "pydantic>=2.11.2",
     "uvicorn>=0.34.0",
 ]
